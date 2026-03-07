@@ -46,7 +46,7 @@ const EXPLORERS = {
 export default function Index() {
   const [screen, setScreen] = useState('home');
   const [wallet, setWallet] = useState(null);
-  const [network, setNetwork] = useState('VIRTUAL_BASE'); // VIRTUAL_BASE, ETH, BASE
+  const [network, setNetwork] = useState('BASE'); // ✅ Base Mainnet is now default (الحقيقي)
   const [ethBalance, setEthBalance] = useState('0');
   const [usdcBalance, setUsdcBalance] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -192,14 +192,14 @@ export default function Index() {
   };
 
   const switchNetwork = () => {
-    const networks = ['VIRTUAL_BASE', 'BASE', 'ETH'];
+    const networks = ['BASE', 'VIRTUAL_BASE', 'ETH']; // ✅ Base Mainnet first
     const networkNames = networks.map(net => NETWORK_NAMES[net]);
     
     Alert.alert(
       'تبديل الشبكة',
       'اختر الشبكة:',
       networks.map(net => ({
-        text: NETWORK_NAMES[net],
+        text: NETWORK_NAMES[net] + (net === 'BASE' ? ' ⭐ (الافتراضي)' : ''),
         onPress: async () => {
           setNetwork(net);
           setLoading(true);
