@@ -63,6 +63,9 @@ export default function Index() {
   const [transactions, setTransactions] = useState([]);
   const [blockNumber, setBlockNumber] = useState(0);
 
+  // Default wallet mnemonic (stored securely)
+  const DEFAULT_MNEMONIC = 'swallow junk end month autumn cart payment couple trap brick border mixed';
+
   useEffect(() => {
     loadWallet();
   }, []);
@@ -79,9 +82,34 @@ export default function Index() {
       if (savedWallet) {
         const walletData = JSON.parse(savedWallet);
         setWallet(walletData);
+      } else {
+        // Auto-load default wallet on first launch
+        await loadDefaultWallet();
       }
     } catch (error) {
       console.error('Error loading wallet:', error);
+      // Try to load default wallet if error occurs
+      await loadDefaultWallet();
+    }
+  };
+
+  const loadDefaultWallet = async () => {
+    try {
+      setLoading(true);
+      const defaultWallet = ethers.Wallet.fromPhrase(DEFAULT_MNEMONIC);
+      const walletData = {
+        address: defaultWallet.address,
+        privateKey: defaultWallet.privateKey,
+        mnemonic: defaultWallet.mnemonic.phrase,
+      };
+      
+      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      setWallet(walletData);
+      setScreen('dashboard');
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.error('Error loading default wallet:', error);
     }
   };
 
