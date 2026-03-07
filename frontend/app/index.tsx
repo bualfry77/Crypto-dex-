@@ -28,7 +28,7 @@ const USDC_CONTRACTS = {
 const RPC_URLS = {
   VIRTUAL_BASE: 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4',
   BASE: 'https://mainnet.base.org',
-  ETH: 'https://eth.llamarpc.com', // Public Ethereum Mainnet RPC
+  ETH: 'https://ethereum.publicnode.com', // ✅ Better Ethereum RPC
 };
 
 const NETWORK_NAMES = {
@@ -146,8 +146,15 @@ export default function Index() {
     if (!wallet) return;
     
     try {
-      const rpcUrl = RPC_URLS[network] || RPC_URLS.VIRTUAL_BASE;
-      const usdcContract = USDC_CONTRACTS[network === 'ETH' ? 'ETH' : 'BASE'];
+      const rpcUrl = RPC_URLS[network] || RPC_URLS.BASE;
+      
+      // ✅ Select correct USDC contract based on network
+      let usdcContract;
+      if (network === 'ETH') {
+        usdcContract = USDC_CONTRACTS.ETH; // Ethereum USDC
+      } else {
+        usdcContract = USDC_CONTRACTS.BASE; // Base/Virtual Base USDC
+      }
       
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       
@@ -169,6 +176,8 @@ export default function Index() {
       setBlockNumber(block);
     } catch (error) {
       console.error('Error loading balances:', error);
+      // Show error to user
+      Alert.alert('خطأ في تحميل الأرصدة', 'تحقق من اتصالك بالإنترنت');
     }
   };
 
@@ -280,20 +289,28 @@ export default function Index() {
     try {
       setLoading(true);
       const rpcUrl = RPC_URLS[network];
-      const usdcContract = USDC_CONTRACTS[network];
+      
+      // ✅ Select correct USDC contract
+      let usdcContractAddress;
+      if (network === 'ETH') {
+        usdcContractAddress = USDC_CONTRACTS.ETH;
+      } else {
+        usdcContractAddress = USDC_CONTRACTS.BASE;
+      }
+      
       const provider = new ethers.JsonRpcProvider(rpcUrl);
       const signer = new ethers.Wallet(wallet.privateKey, provider);
       
       // Confirm before sending
       Alert.alert(
         '⚠️ تأكيد المعاملة الحقيقية',
-        `ستقوم بإرسال معاملة USDC حقيقية على ${NETWORK_NAMES[network]}!\n\nالمبلغ: ${amount} USDC\nإلى: ${toAddress.substring(0,10)}...\n\nهل أنت متأكد؟`,
+        `ستقوم بإرسال معاملة USDC حقيقية على ${NETWORK_NAMES[network]}!\n\nالمبلغ: ${amount} USDC\nإلى: ${toAddress.substring(0,10)}...\n\nعقد USDC: ${usdcContractAddress.substring(0,10)}...\n\nهل أنت متأكد؟`,
         [
           { text: 'إلغاء', style: 'cancel', onPress: () => setLoading(false) },
           { text: 'تأكيد الإرسال', onPress: async () => {
             try {
               const usdcContractInstance = new ethers.Contract(
-                usdcContract,
+                usdcContractAddress,
                 ['function transfer(address to, uint256 amount) returns (bool)'],
                 signer
               );
