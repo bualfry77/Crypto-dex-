@@ -17,15 +17,23 @@ import QRCode from 'react-native-qrcode-svg';
 import 'react-native-get-random-values';
 import { ethers } from 'ethers';
 
-// USDC Contract on Base
-const USDC_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+// USDC Contracts
+const USDC_CONTRACTS = {
+  BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+};
 
 // Tenderly Virtual Base RPC
-const RPC_URL = 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4';
+const RPC_URLS = {
+  VIRTUAL_BASE: 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4',
+  ETH_MAINNET: 'https://eth-mainnet.g.alchemy.com/v2/demo', // Demo RPC
+  BASE_MAINNET: 'https://mainnet.base.org',
+};
 
 export default function Index() {
   const [screen, setScreen] = useState('home');
   const [wallet, setWallet] = useState(null);
+  const [network, setNetwork] = useState('VIRTUAL_BASE'); // VIRTUAL_BASE, ETH, BASE
   const [ethBalance, setEthBalance] = useState('0');
   const [usdcBalance, setUsdcBalance] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -125,19 +133,22 @@ export default function Index() {
     if (!wallet) return;
     
     try {
-      const provider = new ethers.JsonRpcProvider(RPC_URL);
+      const rpcUrl = RPC_URLS[network] || RPC_URLS.VIRTUAL_BASE;
+      const usdcContract = USDC_CONTRACTS[network === 'ETH' ? 'ETH' : 'BASE'];
+      
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
       
       // Get ETH balance
       const ethBal = await provider.getBalance(wallet.address);
       setEthBalance(ethers.formatEther(ethBal));
       
       // Get USDC balance
-      const usdcContract = new ethers.Contract(
-        USDC_CONTRACT,
+      const usdcContractInstance = new ethers.Contract(
+        usdcContract,
         ['function balanceOf(address) view returns (uint256)'],
         provider
       );
-      const usdcBal = await usdcContract.balanceOf(wallet.address);
+      const usdcBal = await usdcContractInstance.balanceOf(wallet.address);
       setUsdcBalance(ethers.formatUnits(usdcBal, 6));
       
       // Get current block number
