@@ -28,7 +28,8 @@ const USDC_CONTRACTS = {
 const RPC_URLS = {
   VIRTUAL_BASE: 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4',
   BASE: 'https://mainnet.base.org',
-  ETH: 'https://ethereum.publicnode.com', // ✅ Better Ethereum RPC
+  ETH: 'https://ethereum.publicnode.com', // Fast & reliable
+  ETH_TENDERLY: 'https://mainnet.eu.rpc.tenderly.co/ab7e4af3-f3fb-4858-b123-bdc547aa94c9', // Backup Tenderly
 };
 
 const NETWORK_NAMES = {
@@ -146,7 +147,10 @@ export default function Index() {
     if (!wallet) return;
     
     try {
-      const rpcUrl = RPC_URLS[network] || RPC_URLS.BASE;
+      let rpcUrl = RPC_URLS[network] || RPC_URLS.BASE;
+      
+      // ✅ For Ethereum, try Tenderly as backup if primary fails
+      const isEthereum = network === 'ETH';
       
       // ✅ Select correct USDC contract based on network
       let usdcContract;
@@ -156,7 +160,18 @@ export default function Index() {
         usdcContract = USDC_CONTRACTS.BASE; // Base/Virtual Base USDC
       }
       
-      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      let provider;
+      try {
+        provider = new ethers.JsonRpcProvider(rpcUrl, null, { timeout: 10000 });
+      } catch (error) {
+        // If primary RPC fails for Ethereum, try Tenderly
+        if (isEthereum && RPC_URLS.ETH_TENDERLY) {
+          console.log('Primary RPC failed, trying Tenderly...');
+          provider = new ethers.JsonRpcProvider(RPC_URLS.ETH_TENDERLY);
+        } else {
+          throw error;
+        }
+      }
       
       // Get ETH balance
       const ethBal = await provider.getBalance(wallet.address);
