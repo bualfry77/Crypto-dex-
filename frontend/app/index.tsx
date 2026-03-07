@@ -19,15 +19,28 @@ import { ethers } from 'ethers';
 
 // USDC Contracts
 const USDC_CONTRACTS = {
+  VIRTUAL_BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
 };
 
-// Tenderly Virtual Base RPC
+// Real Mainnet RPC URLs
 const RPC_URLS = {
   VIRTUAL_BASE: 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4',
-  ETH_MAINNET: 'https://eth-mainnet.g.alchemy.com/v2/demo', // Demo RPC
-  BASE_MAINNET: 'https://mainnet.base.org',
+  BASE: 'https://mainnet.base.org',
+  ETH: 'https://eth.llamarpc.com', // Public Ethereum Mainnet RPC
+};
+
+const NETWORK_NAMES = {
+  VIRTUAL_BASE: 'Virtual Base (Testnet)',
+  BASE: 'Base Mainnet',
+  ETH: 'Ethereum Mainnet',
+};
+
+const EXPLORERS = {
+  VIRTUAL_BASE: 'https://base.blockscout.com',
+  BASE: 'https://basescan.org',
+  ETH: 'https://etherscan.io',
 };
 
 export default function Index() {
@@ -160,8 +173,40 @@ export default function Index() {
   };
 
   const openBlockExplorer = (type, value) => {
-    const explorerUrl = `https://base.blockscout.com/${type}/${value}`;
-    Alert.alert('Block Explorer', `افتح المتصفح لعرض: ${explorerUrl}`);
+    const explorerBase = EXPLORERS[network] || EXPLORERS.VIRTUAL_BASE;
+    const explorerUrl = `${explorerBase}/${type}/${value}`;
+    Alert.alert(
+      'Block Explorer', 
+      `عرض على ${NETWORK_NAMES[network]}:\n\n${explorerUrl}\n\nانسخ الرابط؟`,
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { 
+          text: 'نسخ', 
+          onPress: async () => {
+            await Clipboard.setStringAsync(explorerUrl);
+            Alert.alert('تم', 'تم نسخ الرابط');
+          }
+        },
+      ]
+    );
+  };
+
+  const switchNetwork = () => {
+    const networks = ['VIRTUAL_BASE', 'BASE', 'ETH'];
+    Alert.alert(
+      'تبديل الشبكة',
+      'اختر الشبكة:',
+      networks.map(net => ({
+        text: NETWORK_NAMES[net],
+        onPress: () => {
+          setNetwork(net);
+          Alert.alert('تم', `تم التبديل إلى ${NETWORK_NAMES[net]}`);
+          if (wallet) {
+            loadBalances();
+          }
+        }
+      }))
+    );
   };
 
   const sendETH = async () => {
@@ -172,21 +217,42 @@ export default function Index() {
 
     try {
       setLoading(true);
-      const provider = new ethers.JsonRpcProvider(RPC_URL);
+      const rpcUrl = RPC_URLS[network];
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
       const signer = new ethers.Wallet(wallet.privateKey, provider);
       
-      const tx = await signer.sendTransaction({
-        to: toAddress,
-        value: ethers.parseEther(amount),
-      });
-      
-      setTxHash(tx.hash);
-      Alert.alert('نجح!', `تم إرسال المعاملة\nHash: ${tx.hash.substring(0, 10)}...`);
-      
-      await tx.wait();
-      await loadBalances();
-      setLoading(false);
-      setScreen('dashboard');
+      // Confirm before sending real transaction
+      Alert.alert(
+        '⚠️ تأكيد المعاملة الحقيقية',
+        `ستقوم بإرسال معاملة حقيقية على ${NETWORK_NAMES[network]}!\n\nالمبلغ: ${amount} ETH\nإلى: ${toAddress.substring(0,10)}...\n\nهل أنت متأكد؟`,
+        [
+          { text: 'إلغاء', style: 'cancel', onPress: () => setLoading(false) },
+          { text: 'تأكيد الإرسال', onPress: async () => {
+            try {
+              const tx = await signer.sendTransaction({
+                to: toAddress,
+                value: ethers.parseEther(amount),
+              });
+              
+              setTxHash(tx.hash);
+              Alert.alert(
+                '✅ تم الإرسال!', 
+                `المعاملة على البلوكشين:\n\nHash: ${tx.hash.substring(0, 20)}...\n\nجاري التأكيد...`,
+                [{ text: 'حسناً', onPress: async () => {
+                  await tx.wait();
+                  await loadBalances();
+                  Alert.alert('✅ مؤكد', 'تم تأكيد المعاملة على البلوكشين!');
+                  setScreen('dashboard');
+                }}]
+              );
+            } catch (err) {
+              Alert.alert('خطأ', err.message || 'فشل إرسال المعاملة');
+            } finally {
+              setLoading(false);
+            }
+          }},
+        ]
+      );
     } catch (error) {
       setLoading(false);
       Alert.alert('خطأ', error.message || 'فشل إرسال المعاملة');
@@ -201,23 +267,49 @@ export default function Index() {
 
     try {
       setLoading(true);
-      const provider = new ethers.JsonRpcProvider(RPC_URL);
+      const rpcUrl = RPC_URLS[network];
+      const usdcContract = USDC_CONTRACTS[network];
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
       const signer = new ethers.Wallet(wallet.privateKey, provider);
       
-      const usdcContract = new ethers.Contract(
-        USDC_CONTRACT,
-        ['function transfer(address to, uint256 amount) returns (bool)'],
-        signer
+      // Confirm before sending
+      Alert.alert(
+        '⚠️ تأكيد المعاملة الحقيقية',
+        `ستقوم بإرسال معاملة USDC حقيقية على ${NETWORK_NAMES[network]}!\n\nالمبلغ: ${amount} USDC\nإلى: ${toAddress.substring(0,10)}...\n\nهل أنت متأكد؟`,
+        [
+          { text: 'إلغاء', style: 'cancel', onPress: () => setLoading(false) },
+          { text: 'تأكيد الإرسال', onPress: async () => {
+            try {
+              const usdcContractInstance = new ethers.Contract(
+                usdcContract,
+                ['function transfer(address to, uint256 amount) returns (bool)'],
+                signer
+              );
+              
+              const tx = await usdcContractInstance.transfer(
+                toAddress, 
+                ethers.parseUnits(amount, 6)
+              );
+              
+              setTxHash(tx.hash);
+              Alert.alert(
+                '✅ تم الإرسال!', 
+                `معاملة USDC على البلوكشين:\n\nHash: ${tx.hash.substring(0, 20)}...\n\nجاري التأكيد...`,
+                [{ text: 'حسناً', onPress: async () => {
+                  await tx.wait();
+                  await loadBalances();
+                  Alert.alert('✅ مؤكد', 'تم تأكيد معاملة USDC على البلوكشين!');
+                  setScreen('dashboard');
+                }}]
+              );
+            } catch (err) {
+              Alert.alert('خطأ', err.message || 'فشل إرسال USDC');
+            } finally {
+              setLoading(false);
+            }
+          }},
+        ]
       );
-      
-      const tx = await usdcContract.transfer(toAddress, ethers.parseUnits(amount, 6));
-      setTxHash(tx.hash);
-      Alert.alert('نجح!', `تم إرسال المعاملة\nHash: ${tx.hash.substring(0, 10)}...`);
-      
-      await tx.wait();
-      await loadBalances();
-      setLoading(false);
-      setScreen('dashboard');
     } catch (error) {
       setLoading(false);
       Alert.alert('خطأ', error.message || 'فشل إرسال USDC');
@@ -433,15 +525,20 @@ export default function Index() {
           </TouchableOpacity>
         </View>
 
+        {/* Network Switcher */}
+        <TouchableOpacity style={styles.networkSwitcher} onPress={switchNetwork}>
+          <View style={styles.networkInfo}>
+            <Ionicons name="globe" size={20} color="#3B82F6" />
+            <Text style={styles.networkName}>{NETWORK_NAMES[network]}</Text>
+          </View>
+          <Ionicons name="swap-horizontal" size={20} color="#3B82F6" />
+        </TouchableOpacity>
+
         {/* Blockchain Info */}
         <View style={styles.blockchainInfo}>
           <View style={styles.infoItem}>
             <Ionicons name="cube-outline" size={16} color="#3B82F6" />
             <Text style={styles.infoText}>Block: {blockNumber}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Ionicons name="globe-outline" size={16} color="#3B82F6" />
-            <Text style={styles.infoText}>Virtual Base</Text>
           </View>
           <TouchableOpacity
             style={styles.infoItem}
@@ -450,6 +547,10 @@ export default function Index() {
             <Ionicons name="open-outline" size={16} color="#3B82F6" />
             <Text style={styles.infoLink}>Explorer</Text>
           </TouchableOpacity>
+          <View style={styles.infoItem}>
+            <Ionicons name="flash" size={16} color="#10B981" />
+            <Text style={styles.infoTextGreen}>Real TX</Text>
+          </View>
         </View>
 
         <View style={styles.balanceCard}>
@@ -502,9 +603,9 @@ export default function Index() {
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
             <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-            <Text style={styles.statusText}>متصل بالبلوكشين</Text>
+            <Text style={styles.statusText}>✅ معاملات حقيقية على Blockchain</Text>
           </View>
-          <Text style={styles.statusSubtext}>Tenderly Virtual Base RPC</Text>
+          <Text style={styles.statusSubtext}>جميع المعاملات تتم على {NETWORK_NAMES[network]}</Text>
         </View>
       </ScrollView>
     );
@@ -897,9 +998,36 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
   },
+  infoTextGreen: {
+    color: '#10B981',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   infoLink: {
     color: '#3B82F6',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  networkSwitcher: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    padding: 16,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#3B82F6',
+  },
+  networkInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  networkName: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
   statusCard: {
