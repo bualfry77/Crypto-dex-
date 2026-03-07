@@ -13,8 +13,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { WalletService } from '../src/services/walletService';
-import { useWalletStore } from '../src/store/walletStore';
+import { WalletService } from '@/services/walletService';
+import { useWalletStore } from '@/store/walletStore';
 
 export default function ImportWallet() {
   const router = useRouter();
