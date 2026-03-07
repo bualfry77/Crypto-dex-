@@ -9,6 +9,11 @@
 art immense remain lobster charge leader search arena round battle inside symbol
 ```
 
+**💰 الأرصدة الحالية:**
+- **Base Mainnet:** 2.696221 USDC + 0.0000000098 ETH ✅
+- **Ethereum Mainnet:** 0.000002870 ETH ✅  
+- **Virtual Base:** 0 ETH, 0 USDC (للاختبار)
+
 ⚠️ **تحذير:** احفظ العبارة السرية في مكان آمن جداً! لا تشاركها مع أحد!
 
 ---

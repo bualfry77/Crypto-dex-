@@ -66,7 +66,7 @@ export default function Index() {
     if (wallet) {
       loadBalances();
     }
-  }, [wallet]);
+  }, [wallet, network]); // Add network dependency to reload when switching
 
   const loadWallet = async () => {
     try {
@@ -193,17 +193,29 @@ export default function Index() {
 
   const switchNetwork = () => {
     const networks = ['VIRTUAL_BASE', 'BASE', 'ETH'];
+    const networkNames = networks.map(net => NETWORK_NAMES[net]);
+    
     Alert.alert(
       'تبديل الشبكة',
       'اختر الشبكة:',
       networks.map(net => ({
         text: NETWORK_NAMES[net],
-        onPress: () => {
+        onPress: async () => {
           setNetwork(net);
-          Alert.alert('تم', `تم التبديل إلى ${NETWORK_NAMES[net]}`);
-          if (wallet) {
-            loadBalances();
-          }
+          setLoading(true);
+          Alert.alert('⏳ جاري التحديث', `جاري الاتصال بـ ${NETWORK_NAMES[net]}...`);
+          
+          // Small delay to let state update
+          setTimeout(async () => {
+            try {
+              await loadBalances();
+              setLoading(false);
+              Alert.alert('✅ تم', `تم التبديل إلى ${NETWORK_NAMES[net]}\n\nالأرصدة المحدثة:\nETH: ${ethBalance}\nUSDC: ${usdcBalance}`);
+            } catch (error) {
+              setLoading(false);
+              Alert.alert('خطأ', 'فشل تحميل الأرصدة');
+            }
+          }, 500);
         }
       }))
     );
