@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useWalletStore } from '@/store/walletStore';
-import { BlockchainService } from '@/services/blockchainService';
-import { WalletService } from '@/services/walletService';
-import { NETWORKS } from '@/utils/constants';
+import { useWalletStore } from '../src/store/walletStore';
+import { BlockchainService } from '../src/services/blockchainService';
+import { WalletService } from '../src/services/walletService';
+import { NETWORKS } from '../src/utils/constants';
 
 export default function Send() {
   const router = useRouter();

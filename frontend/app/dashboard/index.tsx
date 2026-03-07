@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useWalletStore } from '@/store/walletStore';
-import { NETWORKS, NetworkType } from '@/utils/constants';
-import { BlockchainService } from '@/services/blockchainService';
+import { useWalletStore } from '../src/store/walletStore';
+import { NETWORKS, NetworkType } from '../src/utils/constants';
+import { BlockchainService } from '../src/services/blockchainService';
 import * as Clipboard from 'expo-clipboard';
 
 export default function Dashboard() {

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useWalletStore } from '@/store/walletStore';
+import { useWalletStore } from '../src/store/walletStore';
 
 export default function Index() {
   const router = useRouter();

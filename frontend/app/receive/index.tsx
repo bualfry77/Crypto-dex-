@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useWalletStore } from '@/store/walletStore';
-import { NETWORKS } from '@/utils/constants';
+import { useWalletStore } from '../src/store/walletStore';
+import { NETWORKS } from '../src/utils/constants';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 

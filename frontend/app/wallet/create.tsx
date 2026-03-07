@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { WalletService } from '@/services/walletService';
-import { useWalletStore } from '@/store/walletStore';
+import { WalletService } from '../src/services/walletService';
+import { useWalletStore } from '../src/store/walletStore';
 import * as Clipboard from 'expo-clipboard';
 
 export default function CreateWallet() {
