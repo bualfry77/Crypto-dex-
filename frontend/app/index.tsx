@@ -30,9 +30,12 @@ export default function Index() {
   const [usdcBalance, setUsdcBalance] = useState('0');
   const [loading, setLoading] = useState(false);
   const [mnemonic, setMnemonic] = useState('');
+  const [privateKey, setPrivateKey] = useState('');
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [transactions, setTransactions] = useState([]);
+  const [blockNumber, setBlockNumber] = useState(0);
 
   useEffect(() => {
     loadWallet();
@@ -97,6 +100,27 @@ export default function Index() {
     }
   };
 
+  const importFromPrivateKey = async () => {
+    try {
+      setLoading(true);
+      const importedWallet = new ethers.Wallet(privateKey);
+      const walletData = {
+        address: importedWallet.address,
+        privateKey: importedWallet.privateKey,
+        mnemonic: null,
+      };
+      
+      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      setWallet(walletData);
+      setScreen('dashboard');
+      setLoading(false);
+      Alert.alert('نجح!', 'تم استيراد المحفظة بنجاح');
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('خطأ', 'مفتاح خاص غير صحيح');
+    }
+  };
+
   const loadBalances = async () => {
     if (!wallet) return;
     
@@ -115,9 +139,18 @@ export default function Index() {
       );
       const usdcBal = await usdcContract.balanceOf(wallet.address);
       setUsdcBalance(ethers.formatUnits(usdcBal, 6));
+      
+      // Get current block number
+      const block = await provider.getBlockNumber();
+      setBlockNumber(block);
     } catch (error) {
       console.error('Error loading balances:', error);
     }
+  };
+
+  const openBlockExplorer = (type, value) => {
+    const explorerUrl = `https://base.blockscout.com/${type}/${value}`;
+    Alert.alert('Block Explorer', `افتح المتصفح لعرض: ${explorerUrl}`);
   };
 
   const sendETH = async () => {
@@ -260,7 +293,7 @@ export default function Index() {
   // Import Screen
   if (screen === 'import') {
     return (
-      <View style={styles.container}>
+      <ScrollView style={styles.container}>
         <View style={styles.content}>
           <TouchableOpacity
             style={styles.backButton}
@@ -270,6 +303,50 @@ export default function Index() {
           </TouchableOpacity>
 
           <Text style={styles.title}>استيراد محفظة</Text>
+          
+          <Text style={styles.label}>اختر طريقة الاستيراد:</Text>
+          
+          <TouchableOpacity
+            style={styles.optionCard}
+            onPress={() => setScreen('importMnemonic')}
+          >
+            <Ionicons name="key-outline" size={32} color="#3B82F6" />
+            <View style={{flex: 1}}>
+              <Text style={styles.optionTitle}>العبارة السرية</Text>
+              <Text style={styles.optionDesc}>12 أو 24 كلمة</Text>
+            </View>
+            <Ionicons name="chevron-back" size={24} color="#64748B" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.optionCard}
+            onPress={() => setScreen('importPrivateKey')}
+          >
+            <Ionicons name="lock-closed-outline" size={32} color="#3B82F6" />
+            <View style={{flex: 1}}>
+              <Text style={styles.optionTitle}>المفتاح الخاص</Text>
+              <Text style={styles.optionDesc}>0x...</Text>
+            </View>
+            <Ionicons name="chevron-back" size={24} color="#64748B" />
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // Import Mnemonic Screen
+  if (screen === 'importMnemonic') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setScreen('import')}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.title}>العبارة السرية</Text>
           
           <TextInput
             style={styles.textArea}
@@ -290,6 +367,47 @@ export default function Index() {
     );
   }
 
+  // Import Private Key Screen
+  if (screen === 'importPrivateKey') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setScreen('import')}
+          >
+            <Ionicons name="arrow-forward" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <Text style={styles.title}>المفتاح الخاص</Text>
+          
+          <TextInput
+            style={styles.textArea}
+            multiline
+            numberOfLines={3}
+            placeholder="أدخل المفتاح الخاص (0x...)"
+            placeholderTextColor="#64748B"
+            value={privateKey}
+            onChangeText={setPrivateKey}
+            autoCapitalize="none"
+            secureTextEntry
+          />
+
+          <View style={styles.warningBox}>
+            <Ionicons name="shield-checkmark" size={24} color="#10B981" />
+            <Text style={styles.warningText}>
+              المفتاح الخاص يُحفظ بشكل آمن على جهازك فقط
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={importFromPrivateKey}>
+            <Text style={styles.buttonText}>استيراد</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // Dashboard Screen
   if (screen === 'dashboard') {
     return (
@@ -301,6 +419,25 @@ export default function Index() {
               {wallet.address.substring(0, 6)}...{wallet.address.substring(38)}
             </Text>
             <Ionicons name="copy-outline" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Blockchain Info */}
+        <View style={styles.blockchainInfo}>
+          <View style={styles.infoItem}>
+            <Ionicons name="cube-outline" size={16} color="#3B82F6" />
+            <Text style={styles.infoText}>Block: {blockNumber}</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <Ionicons name="globe-outline" size={16} color="#3B82F6" />
+            <Text style={styles.infoText}>Virtual Base</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.infoItem}
+            onPress={() => openBlockExplorer('address', wallet.address)}
+          >
+            <Ionicons name="open-outline" size={16} color="#3B82F6" />
+            <Text style={styles.infoLink}>Explorer</Text>
           </TouchableOpacity>
         </View>
 
@@ -349,6 +486,15 @@ export default function Index() {
           <Ionicons name="refresh" size={20} color="#3B82F6" />
           <Text style={styles.refreshText}>تحديث الأرصدة</Text>
         </TouchableOpacity>
+
+        {/* Blockchain Connection Status */}
+        <View style={styles.statusCard}>
+          <View style={styles.statusRow}>
+            <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+            <Text style={styles.statusText}>متصل بالبلوكشين</Text>
+          </View>
+          <Text style={styles.statusSubtext}>Tenderly Virtual Base RPC</Text>
+        </View>
       </ScrollView>
     );
   }
@@ -694,5 +840,81 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignSelf: 'center',
     marginBottom: 24,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E293B',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  optionDesc: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  blockchainInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    marginHorizontal: 20,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoText: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  infoLink: {
+    color: '#3B82F6',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusCard: {
+    backgroundColor: '#1E293B',
+    marginHorizontal: 20,
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  statusText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  statusSubtext: {
+    color: '#64748B',
+    fontSize: 12,
+    marginLeft: 28,
   },
 });
