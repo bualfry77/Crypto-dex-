@@ -19,6 +19,7 @@ import { ethers } from 'ethers';
 
 // USDC Contracts
 const USDC_CONTRACTS = {
+  VIRTUAL_MAINNET: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // Virtual Ethereum Mainnet
   VIRTUAL_BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   BASE: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
   ETH: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
@@ -26,19 +27,22 @@ const USDC_CONTRACTS = {
 
 // Real Mainnet RPC URLs
 const RPC_URLS = {
+  VIRTUAL_MAINNET: 'https://virtual.mainnet.eu.rpc.tenderly.co/a5b0561f-8857-4a09-a786-b93f6ed43efe', // ⭐ Virtual Ethereum Mainnet
   VIRTUAL_BASE: 'https://virtual.base.rpc.tenderly.co/6489289e-4554-4dff-a239-4cd3f863d4c4',
   BASE: 'https://mainnet.base.org',
-  ETH: 'https://ethereum.publicnode.com', // Fast & reliable
-  ETH_TENDERLY: 'https://mainnet.eu.rpc.tenderly.co/ab7e4af3-f3fb-4858-b123-bdc547aa94c9', // Backup Tenderly
+  ETH: 'https://ethereum.publicnode.com',
+  ETH_TENDERLY: 'https://mainnet.eu.rpc.tenderly.co/ab7e4af3-f3fb-4858-b123-bdc547aa94c9',
 };
 
 const NETWORK_NAMES = {
+  VIRTUAL_MAINNET: '⭐ Virtual Mainnet (Ethereum)', // Default
   VIRTUAL_BASE: 'Virtual Base (Testnet)',
   BASE: 'Base Mainnet',
   ETH: 'Ethereum Mainnet',
 };
 
 const EXPLORERS = {
+  VIRTUAL_MAINNET: 'https://etherscan.io', // Uses Ethereum explorer
   VIRTUAL_BASE: 'https://base.blockscout.com',
   BASE: 'https://basescan.org',
   ETH: 'https://etherscan.io',
@@ -47,7 +51,7 @@ const EXPLORERS = {
 export default function Index() {
   const [screen, setScreen] = useState('home');
   const [wallet, setWallet] = useState(null);
-  const [network, setNetwork] = useState('BASE'); // ✅ Base Mainnet is now default (الحقيقي)
+  const [network, setNetwork] = useState('VIRTUAL_MAINNET'); // ⭐ Virtual Mainnet is default
   const [ethBalance, setEthBalance] = useState('0');
   const [usdcBalance, setUsdcBalance] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -147,17 +151,19 @@ export default function Index() {
     if (!wallet) return;
     
     try {
-      let rpcUrl = RPC_URLS[network] || RPC_URLS.BASE;
+      let rpcUrl = RPC_URLS[network] || RPC_URLS.VIRTUAL_MAINNET;
       
       // ✅ For Ethereum, try Tenderly as backup if primary fails
       const isEthereum = network === 'ETH';
       
       // ✅ Select correct USDC contract based on network
       let usdcContract;
-      if (network === 'ETH') {
+      if (network === 'ETH' || network === 'VIRTUAL_MAINNET') {
         usdcContract = USDC_CONTRACTS.ETH; // Ethereum USDC
+      } else if (network === 'BASE' || network === 'VIRTUAL_BASE') {
+        usdcContract = USDC_CONTRACTS.BASE; // Base USDC
       } else {
-        usdcContract = USDC_CONTRACTS.BASE; // Base/Virtual Base USDC
+        usdcContract = USDC_CONTRACTS.BASE; // Default to Base
       }
       
       let provider;
@@ -216,14 +222,14 @@ export default function Index() {
   };
 
   const switchNetwork = () => {
-    const networks = ['BASE', 'VIRTUAL_BASE', 'ETH']; // ✅ Base Mainnet first
+    const networks = ['VIRTUAL_MAINNET', 'BASE', 'ETH', 'VIRTUAL_BASE']; // Virtual Mainnet first
     const networkNames = networks.map(net => NETWORK_NAMES[net]);
     
     Alert.alert(
       'تبديل الشبكة',
       'اختر الشبكة:',
       networks.map(net => ({
-        text: NETWORK_NAMES[net] + (net === 'BASE' ? ' ⭐ (الافتراضي)' : ''),
+        text: NETWORK_NAMES[net],
         onPress: async () => {
           setNetwork(net);
           setLoading(true);
