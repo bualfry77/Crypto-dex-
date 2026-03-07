@@ -13,9 +13,37 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import QRCode from 'react-native-qrcode-svg';
 import 'react-native-get-random-values';
 import { ethers } from 'ethers';
+
+// Platform-aware storage helper
+const Storage = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      // Try SecureStore first (mobile)
+      return await SecureStore.getItemAsync(key);
+    } catch {
+      // Fallback to AsyncStorage (web)
+      return await AsyncStorage.getItem(key);
+    }
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch {
+      await AsyncStorage.setItem(key, value);
+    }
+  },
+  async deleteItem(key: string): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      await AsyncStorage.removeItem(key);
+    }
+  }
+};
 
 // USDC Contracts
 const USDC_CONTRACTS = {
@@ -78,7 +106,7 @@ export default function Index() {
 
   const loadWallet = async () => {
     try {
-      const savedWallet = await SecureStore.getItemAsync('wallet');
+      const savedWallet = await Storage.getItem('wallet');
       if (savedWallet) {
         const walletData = JSON.parse(savedWallet);
         setWallet(walletData);
@@ -103,7 +131,7 @@ export default function Index() {
         mnemonic: defaultWallet.mnemonic.phrase,
       };
       
-      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      await Storage.setItem('wallet', JSON.stringify(walletData));
       setWallet(walletData);
       setScreen('dashboard');
       setLoading(false);
@@ -111,6 +139,43 @@ export default function Index() {
       setLoading(false);
       console.error('Error loading default wallet:', error);
     }
+  };
+
+  const resetToDefaultWallet = async () => {
+    Alert.alert(
+      'إعادة تعيين المحفظة',
+      'هل تريد تحميل المحفظة الافتراضية؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { 
+          text: 'نعم', 
+          onPress: async () => {
+            await Storage.deleteItem('wallet');
+            setWallet(null);
+            await loadDefaultWallet();
+          }
+        },
+      ]
+    );
+  };
+
+  const logout = async () => {
+    Alert.alert(
+      'تسجيل الخروج',
+      'هل تريد تسجيل الخروج من المحفظة؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        { 
+          text: 'خروج', 
+          style: 'destructive',
+          onPress: async () => {
+            await Storage.deleteItem('wallet');
+            setWallet(null);
+            setScreen('home');
+          }
+        },
+      ]
+    );
   };
 
   const createWallet = async () => {
@@ -123,7 +188,7 @@ export default function Index() {
         mnemonic: newWallet.mnemonic.phrase,
       };
       
-      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      await Storage.setItem('wallet', JSON.stringify(walletData));
       setWallet(walletData);
       setMnemonic(newWallet.mnemonic.phrase);
       setScreen('showMnemonic');
@@ -144,7 +209,7 @@ export default function Index() {
         mnemonic: importedWallet.mnemonic.phrase,
       };
       
-      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      await Storage.setItem('wallet', JSON.stringify(walletData));
       setWallet(walletData);
       setScreen('dashboard');
       setLoading(false);
@@ -164,7 +229,7 @@ export default function Index() {
         mnemonic: null,
       };
       
-      await SecureStore.setItemAsync('wallet', JSON.stringify(walletData));
+      await Storage.setItem('wallet', JSON.stringify(walletData));
       setWallet(walletData);
       setScreen('dashboard');
       setLoading(false);
@@ -685,6 +750,15 @@ export default function Index() {
           </View>
           <Text style={styles.statusSubtext}>جميع المعاملات تتم على {NETWORK_NAMES[network]}</Text>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={logout}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+          <Text style={styles.logoutText}>تسجيل الخروج</Text>
+        </TouchableOpacity>
       </ScrollView>
     );
   }
@@ -1133,5 +1207,24 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 12,
     marginLeft: 28,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 40,
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  logoutText: {
+    color: '#EF4444',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
